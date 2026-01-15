@@ -3,8 +3,9 @@ name: Deploy Streamlit to EB
 on:
   push:
     branches:
-      - main  # or your default branch
-  workflow_dispatch:   
+      - main
+  workflow_dispatch:   # allows manual trigger
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -43,11 +44,13 @@ jobs:
       # 7️⃣ Deploy to Elastic Beanstalk
       - name: Deploy to Elastic Beanstalk
         run: |
+          VERSION_LABEL="deploy-${{ github.run_number }}"
+
           aws elasticbeanstalk create-application-version \
             --application-name WebEats \
-            --version-label $GITHUB_SHA \
+            --version-label $VERSION_LABEL \
             --source-bundle S3Bucket=webeats-eb-bucket,S3Key=app.zip
 
           aws elasticbeanstalk update-environment \
             --environment-name web-eats-env \
-            --version-label $GITHUB_SHA
+            --version-label $VERSION_LABEL
