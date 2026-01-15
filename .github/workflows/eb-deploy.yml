@@ -1,0 +1,46 @@
+name: Deploy Streamlit to EB
+
+on:
+  push:
+    branches:
+      - main  # or your default branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Zip application
+        run: zip -r app.zip . -x "*.git*" "*.github*" "__pycache__/*"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ca-central-1   # change to your EB region
+
+      - name: Upload zip to S3
+        run: aws s3 cp app.zip s3://web-eats-eb-bucket/app.zip
+
+      - name: Deploy to Elastic Beanstalk
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name WebEats \
+            --version-label $GITHUB_SHA \
+            --source-bundle S3Bucket=webeats-eb-bucket,S3Key=app.zip
+
+          aws elasticbeanstalk update-environment \
+            --environment-name web-eats-env \
+            --version-label $GITHUB_SHA
